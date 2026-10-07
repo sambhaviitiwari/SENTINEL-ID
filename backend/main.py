@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from backend.db.database import Base, engine
 from backend.db import models
+from backend.api.routes import router
 
 
 Base.metadata.create_all(bind=engine)
@@ -12,6 +13,9 @@ app = FastAPI(
     description="AI-Powered Multimodal Digital Identity & Synthetic Media Security System",
     version="0.1.0"
 )
+
+
+app.include_router(router)
 
 
 @app.get("/")

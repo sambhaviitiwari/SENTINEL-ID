@@ -35,3 +35,6 @@ models/*.pkl
 node_modules/
 dist/
 build/
+
+# Uploaded evidence
+data/uploads/
