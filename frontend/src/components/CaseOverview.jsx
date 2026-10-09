@@ -1,6 +1,5 @@
 import {
   ArrowUpRight,
-  Check,
   Clock3,
   FileImage,
   Fingerprint,
@@ -10,19 +9,48 @@ import {
 } from "lucide-react";
 
 function CaseOverview({ caseData }) {
-  const fallbackCase = {
-    case_id: "SNT-F939B9E4",
-    filename: "signature me.jpg",
-    file_type: "jpg",
-    risk_level: "LOW",
-    risk_score: 8.75,
-    created_at: "2026-10-07T04:45:34.042022",
+  const currentCase = caseData || {
+    case_id: "NO CASE SELECTED",
+    filename: "No evidence selected",
+    file_type: "unknown",
+    risk_level: "INCONCLUSIVE",
+    risk_score: null,
+    created_at: null,
+    findings: "",
   };
 
-  const currentCase = caseData || fallbackCase;
+  const findings = Array.isArray(currentCase.findings)
+    ? currentCase.findings.join("\n").toLowerCase()
+    : String(currentCase.findings || "").toLowerCase();
 
-  const riskScore = Number(currentCase.risk_score || 0);
-  const riskLevel = currentCase.risk_level || "LOW";
+  // Only trust assessments explicitly marked inconclusive by the current pipeline.
+  const hasCurrentAssessment = findings.includes(
+    "overall risk classification is inconclusive"
+  );
+
+  // Older baseline results are not validated risk assessments.
+  const riskLevel = hasCurrentAssessment
+    ? currentCase.risk_level || "INCONCLUSIVE"
+    : "INCONCLUSIVE";
+
+  const parsedScore = Number(currentCase.risk_score);
+
+  const hasValidScore =
+    hasCurrentAssessment &&
+    currentCase.risk_score !== null &&
+    currentCase.risk_score !== undefined &&
+    currentCase.risk_score !== "" &&
+    Number.isFinite(parsedScore);
+
+  const scoreDisplay = hasValidScore ? parsedScore.toFixed(2) : "—";
+
+  const scorePosition = hasValidScore
+    ? Math.min(Math.max(parsedScore, 0), 100)
+    : 0;
+
+  const hashCalculated =
+    findings.includes("sha-256 evidence hash calculated successfully") ||
+    findings.includes("sha-256 fingerprint was calculated");
 
   return (
     <section className="case-overview">
@@ -32,7 +60,7 @@ function CaseOverview({ caseData }) {
             <span className="eyebrow">ACTIVE INVESTIGATION</span>
             <span className="case-live">
               <span />
-              LIVE CASE
+              {caseData ? "CASE LOADED" : "AWAITING CASE"}
             </span>
           </div>
 
@@ -41,13 +69,15 @@ function CaseOverview({ caseData }) {
           <div className="case-meta">
             <span>{currentCase.filename}</span>
             <span className="meta-divider">/</span>
-            <span>{String(currentCase.file_type).toUpperCase()}</span>
+            <span>
+              {String(currentCase.file_type || "unknown").toUpperCase()}
+            </span>
             <span className="meta-divider">/</span>
             <span>IDENTITY ANALYSIS</span>
           </div>
         </div>
 
-        <button className="case-action">
+        <button className="case-action" type="button">
           OPEN CASE
           <ArrowUpRight size={15} />
         </button>
@@ -72,7 +102,8 @@ function CaseOverview({ caseData }) {
               <span>VISUAL EVIDENCE</span>
 
               <small>
-                {String(currentCase.file_type).toUpperCase()} // SOURCE FILE
+                {String(currentCase.file_type || "unknown").toUpperCase()}
+                {" // SOURCE FILE"}
               </small>
             </div>
 
@@ -90,7 +121,11 @@ function CaseOverview({ caseData }) {
               RECEIVED {formatTime(currentCase.created_at)}
             </span>
 
-            <span>SHA-256 VERIFIED</span>
+            <span>
+              {hashCalculated
+                ? "SHA-256 CALCULATED"
+                : "HASH STATUS UNKNOWN"}
+            </span>
           </div>
         </div>
 
@@ -101,9 +136,7 @@ function CaseOverview({ caseData }) {
           </div>
 
           <div className="risk-display">
-            <div className="risk-number">
-              {riskScore.toFixed(2)}
-            </div>
+            <div className="risk-number">{scoreDisplay}</div>
 
             <div className={`risk-level ${riskLevel.toLowerCase()}`}>
               <span />
@@ -111,19 +144,20 @@ function CaseOverview({ caseData }) {
             </div>
 
             <p>
-              Composite risk score generated from
-              available evidence analysis modules.
+              {hasValidScore
+                ? "File-integrity check score only. This is not a verified identity-fraud or synthetic-media risk score."
+                : "No validated overall risk score is available. Previous baseline results are treated as inconclusive."}
             </p>
           </div>
 
           <div className="risk-scale">
             <div className="scale-track">
-              <span
-                className="scale-marker"
-                style={{
-                  left: `${Math.min(riskScore, 100)}%`,
-                }}
-              />
+              {hasValidScore && (
+                <span
+                  className="scale-marker"
+                  style={{ left: `${scorePosition}%` }}
+                />
+              )}
             </div>
 
             <div className="scale-labels">
@@ -136,30 +170,30 @@ function CaseOverview({ caseData }) {
 
           <div className="assessment-grid">
             <AssessmentItem
-              icon={Check}
+              icon={ShieldAlert}
               label="DOCUMENT"
-              value="VERIFIED"
-              state="complete"
+              value={hashCalculated ? "FILE CHECKED" : "UNCONFIRMED"}
+              state={hashCalculated ? "complete" : "pending"}
             />
 
             <AssessmentItem
               icon={Fingerprint}
               label="IDENTITY"
-              value="PENDING"
+              value="NOT VERIFIED"
               state="pending"
             />
 
             <AssessmentItem
               icon={ScanSearch}
               label="FORENSICS"
-              value="PENDING"
+              value="LIMITED CHECKS"
               state="pending"
             />
 
             <AssessmentItem
               icon={Sparkles}
               label="SYNTHETIC"
-              value="PENDING"
+              value="MODEL UNAVAILABLE"
               state="pending"
             />
           </div>
@@ -169,12 +203,7 @@ function CaseOverview({ caseData }) {
   );
 }
 
-function AssessmentItem({
-  icon: Icon,
-  label,
-  value,
-  state,
-}) {
+function AssessmentItem({ icon: Icon, label, value, state }) {
   return (
     <div className="assessment-item">
       <div className={`assessment-icon ${state}`}>
