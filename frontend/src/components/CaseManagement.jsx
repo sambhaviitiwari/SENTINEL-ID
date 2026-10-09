@@ -1,3 +1,4 @@
+
 import {
   ArrowUpRight,
   Clock3,
@@ -5,24 +6,16 @@ import {
   ShieldAlert,
 } from "lucide-react";
 
-function CaseManagement({
-  cases,
-  loading,
-  onOpenCase,
-}) {
+function CaseManagement({ cases, loading, onOpenCase }) {
   return (
     <section className="case-management">
-
       <div className="case-management-header">
-
         <div>
           <div className="intro-overline">
             SENTINEL CASE REGISTRY
           </div>
 
-          <h1>
-            Case Management
-          </h1>
+          <h1>Case Management</h1>
 
           <p>
             Registered investigations and digital evidence records.
@@ -31,13 +24,9 @@ function CaseManagement({
 
         <div className="case-count">
           <span>REGISTERED CASES</span>
-          <strong>
-            {String(cases.length).padStart(2, "0")}
-          </strong>
+          <strong>{String(cases.length).padStart(2, "0")}</strong>
         </div>
-
       </div>
-
 
       {loading ? (
         <div className="case-empty-state">
@@ -47,9 +36,7 @@ function CaseManagement({
         <div className="case-empty-state">
           <FileText size={24} />
 
-          <strong>
-            NO CASES REGISTERED
-          </strong>
+          <strong>NO CASES REGISTERED</strong>
 
           <span>
             Submit evidence from the Command Center to create
@@ -58,129 +45,114 @@ function CaseManagement({
         </div>
       ) : (
         <div className="case-list">
+          {cases.map((caseItem) => {
+            const findings = Array.isArray(caseItem.findings)
+              ? caseItem.findings.join("\n").toLowerCase()
+              : String(caseItem.findings || "").toLowerCase();
 
-          {cases.map((caseItem) => (
+            const isCurrentAssessment = findings.includes(
+              "overall risk classification is inconclusive"
+            );
 
-            <article
-              className="case-card"
-              key={caseItem.case_id}
-            >
+            const riskLevel = isCurrentAssessment
+              ? caseItem.risk_level || "INCONCLUSIVE"
+              : "INCONCLUSIVE";
 
-              <div className="case-card-main">
+            const score = Number(caseItem.risk_score);
 
-                <div className="case-card-icon">
-                  <ShieldAlert size={18} />
-                </div>
+            const hasValidScore =
+              isCurrentAssessment &&
+              caseItem.risk_score !== null &&
+              caseItem.risk_score !== undefined &&
+              caseItem.risk_score !== "" &&
+              Number.isFinite(score);
 
-                <div className="case-card-identity">
-
-                  <span className="case-card-label">
-                    CASE ID
-                  </span>
-
-                  <h2>
-                    {caseItem.case_id}
-                  </h2>
-
-                  <div className="case-card-file">
-                    <FileText size={13} />
-
-                    <span>
-                      {caseItem.filename}
-                    </span>
-
-                    <span className="meta-divider">
-                      /
-                    </span>
-
-                    <span>
-                      {String(
-                        caseItem.file_type
-                      ).toUpperCase()}
-                    </span>
+            return (
+              <article
+                className="case-card"
+                key={caseItem.case_id}
+              >
+                <div className="case-card-main">
+                  <div className="case-card-icon">
+                    <ShieldAlert size={18} />
                   </div>
 
+                  <div className="case-card-identity">
+                    <span className="case-card-label">
+                      CASE ID
+                    </span>
+
+                    <h2>{caseItem.case_id}</h2>
+
+                    <div className="case-card-file">
+                      <FileText size={13} />
+
+                      <span>{caseItem.filename}</span>
+
+                      <span className="meta-divider">/</span>
+
+                      <span>
+                        {String(caseItem.file_type || "unknown").toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-              </div>
+                <div className="case-card-risk">
+                  <span className="case-card-label">
+                    FILE CHECK SCORE
+                  </span>
 
+                  <strong>
+                    {hasValidScore ? score.toFixed(2) : "—"}
+                  </strong>
 
-              <div className="case-card-risk">
+                  <span
+                    className={`case-risk-badge ${riskLevel.toLowerCase()}`}
+                  >
+                    {riskLevel}
+                  </span>
 
-                <span className="case-card-label">
-                  RISK SCORE
-                </span>
+                  <small>
+                    {hasValidScore
+                      ? "Not an identity or deepfake risk score"
+                      : "Legacy result; score not validated"}
+                  </small>
+                </div>
 
-                <strong>
-                  {Number(
-                    caseItem.risk_score
-                  ).toFixed(2)}
-                </strong>
+                <div className="case-card-time">
+                  <span className="case-card-label">
+                    CREATED
+                  </span>
 
-                <span
-                  className={`case-risk-badge ${
-                    String(
-                      caseItem.risk_level
-                    ).toLowerCase()
-                  }`}
+                  <span>
+                    <Clock3 size={12} />
+                    {formatDate(caseItem.created_at)}
+                  </span>
+                </div>
+
+                <button
+                  className="case-open-button"
+                  onClick={() => onOpenCase(caseItem.case_id)}
                 >
-                  {caseItem.risk_level}
-                </span>
-
-              </div>
-
-
-              <div className="case-card-time">
-
-                <span className="case-card-label">
-                  CREATED
-                </span>
-
-                <span>
-                  <Clock3 size={12} />
-
-                  {formatDate(
-                    caseItem.created_at
-                  )}
-                </span>
-
-              </div>
-
-
-              <button
-                className="case-open-button"
-                onClick={() =>
-                  onOpenCase(caseItem.case_id)
-                }
-              >
-                OPEN CASE
-
-                <ArrowUpRight size={15} />
-              </button>
-
-            </article>
-
-          ))}
-
+                  OPEN CASE
+                  <ArrowUpRight size={15} />
+                </button>
+              </article>
+            );
+          })}
         </div>
       )}
-
     </section>
   );
 }
 
-
 function formatDate(timestamp) {
-
-  if (!timestamp) {
-    return "--";
-  }
+  if (!timestamp) return "--";
 
   const date = new Date(timestamp);
 
-  if (Number.isNaN(date.getTime())) {
-    return "--";
-  }
+  if (Number.isNaN(date.getTime())) return "--";
 
   return date.toLocaleString([], {
     day: "2-digit",
@@ -190,6 +162,5 @@ function formatDate(timestamp) {
     minute: "2-digit",
   });
 }
-
 
 export default CaseManagement;
