@@ -1,3 +1,4 @@
+
 import os
 import uuid
 from datetime import datetime
@@ -10,42 +11,37 @@ from backend.modules.identity_analysis.analyzer import analyze_identity
 from backend.modules.synthetic_media.analyzer import analyze_synthetic_media
 
 
-def calculate_overall_risk(scores: list[float]) -> tuple[str, float]:
-    overall_score = round(sum(scores) / len(scores), 2)
-
-    if overall_score >= 70:
-        risk_level = "HIGH"
-    elif overall_score >= 40:
-        risk_level = "MEDIUM"
-    else:
-        risk_level = "LOW"
-
-    return risk_level, overall_score
-
-
-def run_analysis(file_path: str, filename: str) -> AnalysisResult:
-
-    case_id = f"SNT-{uuid.uuid4().hex[:8].upper()}"
+def run_analysis(
+    file_path: str,
+    filename: str,
+    case_id: str | None = None
+) -> AnalysisResult:
+    case_id = case_id or f"SNT-{uuid.uuid4().hex[:8].upper()}"
 
     document_result = analyze_document(file_path)
     face_result = analyze_face(file_path)
     identity_result = analyze_identity(file_path)
     synthetic_result = analyze_synthetic_media(file_path)
 
-    scores = [
-        document_result.risk_score,
-        face_result.risk_score,
-        identity_result.risk_score,
-        synthetic_result.risk_score,
-    ]
+    # Until trained detection models are integrated, do not present
+    # the combined result as a verified overall risk classification.
+    overall_risk = "INCONCLUSIVE"
 
-    risk_level, overall_score = calculate_overall_risk(scores)
+    # This score represents document/file-integrity checks only.
+    # It is not a score for identity fraud or synthetic-media detection.
+    risk_score = document_result.risk_score
 
     findings = (
         document_result.findings
         + face_result.findings
         + identity_result.findings
         + synthetic_result.findings
+        + [
+            "Overall risk classification is inconclusive.",
+            "The numeric risk score reflects document/file-integrity checks only.",
+            "Face detection, identity verification, and deepfake detection "
+            "are not currently performed by trained models.",
+        ]
     )
 
     file_type = os.path.splitext(filename)[1].lower().replace(".", "")
@@ -54,8 +50,8 @@ def run_analysis(file_path: str, filename: str) -> AnalysisResult:
         case_id=case_id,
         filename=filename,
         file_type=file_type or "unknown",
-        overall_risk=risk_level,
-        risk_score=overall_score,
+        overall_risk=overall_risk,
+        risk_score=risk_score,
         document_analysis=document_result,
         face_analysis=face_result,
         identity_analysis=identity_result,
