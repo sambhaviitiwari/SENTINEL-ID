@@ -6,6 +6,9 @@ import {
   ScanSearch,
   ShieldAlert,
   Sparkles,
+  FileSearch,
+  Hash,
+  AlertTriangle,
 } from "lucide-react";
 
 function CaseOverview({ caseData }) {
@@ -16,41 +19,94 @@ function CaseOverview({ caseData }) {
     risk_level: "INCONCLUSIVE",
     risk_score: null,
     created_at: null,
-    findings: "",
+    findings: [],
+    analysis_details: null,
   };
+
+  const analysis = currentCase.analysis_details || {};
+  const documentAnalysis = analysis.document_analysis || {};
+  const documentDetails = documentAnalysis.details || {};
+  const faceAnalysis = analysis.face_analysis || {};
+  const faceDetails = faceAnalysis.details || {};
+  const identityAnalysis = analysis.identity_analysis || {};
+  const syntheticAnalysis = analysis.synthetic_media_analysis || {};
 
   const findings = Array.isArray(currentCase.findings)
     ? currentCase.findings.join("\n").toLowerCase()
     : String(currentCase.findings || "").toLowerCase();
 
-  // Only trust assessments explicitly marked inconclusive by the current pipeline.
-  const hasCurrentAssessment = findings.includes(
-    "overall risk classification is inconclusive"
-  );
+  const hasCurrentAssessment =
+    findings.includes("overall risk classification is inconclusive") ||
+    Boolean(analysis.overall_risk === "INCONCLUSIVE");
 
-  // Older baseline results are not validated risk assessments.
   const riskLevel = hasCurrentAssessment
-    ? currentCase.risk_level || "INCONCLUSIVE"
+    ? "INCONCLUSIVE"
     : "INCONCLUSIVE";
 
-  const parsedScore = Number(currentCase.risk_score);
+  const rawDocumentScore = documentAnalysis.risk_score;
+  const parsedDocumentScore = Number(rawDocumentScore);
 
-  const hasValidScore =
-    hasCurrentAssessment &&
-    currentCase.risk_score !== null &&
-    currentCase.risk_score !== undefined &&
-    currentCase.risk_score !== "" &&
-    Number.isFinite(parsedScore);
+  const hasDocumentScore =
+    rawDocumentScore !== null &&
+    rawDocumentScore !== undefined &&
+    rawDocumentScore !== "" &&
+    Number.isFinite(parsedDocumentScore);
 
-  const scoreDisplay = hasValidScore ? parsedScore.toFixed(2) : "—";
+  const scoreDisplay = hasDocumentScore
+    ? parsedDocumentScore.toFixed(2)
+    : "N/A";
 
-  const scorePosition = hasValidScore
-    ? Math.min(Math.max(parsedScore, 0), 100)
-    : 0;
+  const hash = documentDetails.sha256 ||
+    identityAnalysis.details?.sha256 ||
+    "";
 
-  const hashCalculated =
-    findings.includes("sha-256 evidence hash calculated successfully") ||
-    findings.includes("sha-256 fingerprint was calculated");
+  const hashCalculated = Boolean(hash);
+
+  const dimensions = documentDetails.image_dimensions;
+  const imageDimensions =
+    dimensions?.width && dimensions?.height
+      ? `${dimensions.width} × ${dimensions.height}`
+      : "N/A";
+
+  const fileSize = Number(documentDetails.size_bytes);
+  const fileSizeDisplay =
+    Number.isFinite(fileSize) && fileSize >= 0
+      ? formatFileSize(fileSize)
+      : "N/A";
+
+  const detectedFormat =
+    documentDetails.image_format_detected ||
+    documentDetails.file_extension ||
+    currentCase.file_type ||
+    "Unknown";
+
+  const signatureStatus =
+    documentDetails.signature_check || "Not available";
+
+  const metadataStatus =
+    documentDetails.metadata_inspection || "Not available";
+
+  const exifStatus =
+    documentDetails.exif_metadata_present === true
+      ? "PRESENT"
+      : documentDetails.exif_metadata_present === false
+        ? "NOT PRESENT"
+        : "NOT CHECKED";
+
+  const authenticityStatus =
+    documentDetails.authenticity_status || "not_verified";
+
+  const faceDetectionStatus =
+    faceDetails.face_detection_performed === true
+      ? "PERFORMED"
+      : faceDetails.face_detection_performed === false
+        ? "NOT PERFORMED"
+        : "NOT AVAILABLE";
+
+  const syntheticModelStatus =
+    syntheticAnalysis.details?.detection_model_available === true
+      ? "AVAILABLE"
+      : "UNAVAILABLE";
 
   return (
     <section className="case-overview">
@@ -58,6 +114,7 @@ function CaseOverview({ caseData }) {
         <div>
           <div className="eyebrow-row">
             <span className="eyebrow">ACTIVE INVESTIGATION</span>
+
             <span className="case-live">
               <span />
               {caseData ? "CASE LOADED" : "AWAITING CASE"}
@@ -136,7 +193,7 @@ function CaseOverview({ caseData }) {
           </div>
 
           <div className="risk-display">
-            <div className="risk-number">{scoreDisplay}</div>
+            <div className="risk-number">{riskLevel}</div>
 
             <div className={`risk-level ${riskLevel.toLowerCase()}`}>
               <span />
@@ -144,21 +201,14 @@ function CaseOverview({ caseData }) {
             </div>
 
             <p>
-              {hasValidScore
-                ? "File-integrity check score only. This is not a verified identity-fraud or synthetic-media risk score."
-                : "No validated overall risk score is available. Previous baseline results are treated as inconclusive."}
+              The overall assessment is inconclusive. The document file-check
+              score below reflects structural checks only, not verified
+              identity authenticity or deepfake risk.
             </p>
           </div>
 
           <div className="risk-scale">
-            <div className="scale-track">
-              {hasValidScore && (
-                <span
-                  className="scale-marker"
-                  style={{ left: `${scorePosition}%` }}
-                />
-              )}
-            </div>
+            <div className="scale-track" />
 
             <div className="scale-labels">
               <span>LOW</span>
@@ -172,33 +222,181 @@ function CaseOverview({ caseData }) {
             <AssessmentItem
               icon={ShieldAlert}
               label="DOCUMENT"
-              value={hashCalculated ? "FILE CHECKED" : "UNCONFIRMED"}
-              state={hashCalculated ? "complete" : "pending"}
+              value={
+                documentAnalysis.status === "completed"
+                  ? "STRUCTURE CHECKED"
+                  : "LIMITED CHECKS"
+              }
+              state={
+                documentAnalysis.status === "completed"
+                  ? "complete"
+                  : "pending"
+              }
             />
 
             <AssessmentItem
               icon={Fingerprint}
               label="IDENTITY"
-              value="NOT VERIFIED"
+              value={
+                identityAnalysis.details?.identity_verified === true
+                  ? "VERIFIED"
+                  : "NOT VERIFIED"
+              }
               state="pending"
             />
 
             <AssessmentItem
               icon={ScanSearch}
               label="FORENSICS"
-              value="LIMITED CHECKS"
+              value={
+                faceDetails.face_detection_performed
+                  ? "FACE CHECK PERFORMED"
+                  : "LIMITED CHECKS"
+              }
               state="pending"
             />
 
             <AssessmentItem
               icon={Sparkles}
               label="SYNTHETIC"
-              value="MODEL UNAVAILABLE"
+              value={
+                syntheticAnalysis.details?.deepfake_detection_performed
+                  ? "MODEL CHECK PERFORMED"
+                  : "MODEL UNAVAILABLE"
+              }
               state="pending"
             />
           </div>
         </div>
       </div>
+
+      <section className="document-intelligence">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">EVIDENCE INSPECTION // 02</span>
+            <h2>Document Intelligence</h2>
+          </div>
+
+          <div className="document-status">
+            <span />
+            {documentAnalysis.status === "completed"
+              ? "INSPECTION COMPLETED"
+              : "INSPECTION STATUS LIMITED"}
+          </div>
+        </div>
+
+        <div className="document-metadata-grid">
+          <MetadataItem
+            label="FILE FORMAT"
+            value={String(detectedFormat).toUpperCase()}
+          />
+
+          <MetadataItem
+            label="FILE SIZE"
+            value={fileSizeDisplay}
+          />
+
+          <MetadataItem
+            label="IMAGE DIMENSIONS"
+            value={imageDimensions}
+          />
+
+          <MetadataItem
+            label="FILE SIGNATURE"
+            value={String(signatureStatus).toUpperCase()}
+          />
+
+          <MetadataItem
+            label="METADATA INSPECTION"
+            value={String(metadataStatus).toUpperCase()}
+          />
+
+          <MetadataItem
+            label="EXIF METADATA"
+            value={exifStatus}
+          />
+
+          <MetadataItem
+            label="AUTHENTICITY"
+            value={String(authenticityStatus).replaceAll("_", " ").toUpperCase()}
+          />
+
+          <MetadataItem
+            label="FILE CHECK SCORE"
+            value={scoreDisplay}
+          />
+        </div>
+
+        <div className="fingerprint-panel">
+          <div className="fingerprint-heading">
+            <div className="fingerprint-icon">
+              <Hash size={17} />
+            </div>
+
+            <div>
+              <span>CRYPTOGRAPHIC EVIDENCE IDENTIFIER</span>
+              <strong>SHA-256 FINGERPRINT</strong>
+            </div>
+
+            <span
+              className={`fingerprint-badge ${hashCalculated ? "available" : ""}`}
+            >
+              {hashCalculated ? "CALCULATED" : "UNAVAILABLE"}
+            </span>
+          </div>
+
+          <div className="fingerprint-value">
+            {hashCalculated ? hash : "No SHA-256 fingerprint available"}
+          </div>
+
+          <p>
+            This hash identifies the file contents used during analysis.
+            Matching hashes can help establish that two files are byte-for-byte
+            identical; a hash alone does not establish that a document is
+            genuine.
+          </p>
+        </div>
+
+        <div className="document-metadata-grid secondary-metadata">
+          <MetadataItem
+            label="FACE DETECTION"
+            value={faceDetectionStatus}
+          />
+
+          <MetadataItem
+            label="SYNTHETIC DETECTION MODEL"
+            value={syntheticModelStatus}
+          />
+
+          <MetadataItem
+            label="IDENTITY VERIFICATION"
+            value={
+              identityAnalysis.details?.identity_verified === true
+                ? "VERIFIED"
+                : "NOT VERIFIED"
+            }
+          />
+
+          <MetadataItem
+            label="STRUCTURAL VALIDATION"
+            value={String(
+              documentDetails.structural_validation || "Not available"
+            ).toUpperCase()}
+          />
+        </div>
+
+        <div className="document-disclaimer">
+          <AlertTriangle size={17} />
+
+          <p>
+            <strong>ANALYSIS LIMITATION:</strong> A passed file-signature or
+            structural check does not prove that a document is authentic.
+            Identity verification and synthetic-media detection are not
+            confirmed unless their dedicated analysis models actually run and
+            produce validated results. The overall case remains inconclusive.
+          </p>
+        </div>
+      </section>
     </section>
   );
 }
@@ -218,14 +416,27 @@ function AssessmentItem({ icon: Icon, label, value, state }) {
   );
 }
 
+function MetadataItem({ label, value }) {
+  return (
+    <div className="document-metadata-item">
+      <span>{label}</span>
+      <strong>{value || "N/A"}</strong>
+    </div>
+  );
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 function formatTime(timestamp) {
   if (!timestamp) return "--:--";
 
   const date = new Date(timestamp);
 
-  if (Number.isNaN(date.getTime())) {
-    return "--:--";
-  }
+  if (Number.isNaN(date.getTime())) return "--:--";
 
   return date.toLocaleTimeString([], {
     hour: "2-digit",

@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import uuid
@@ -13,10 +14,31 @@ from backend.db.models import Case
 
 router = APIRouter()
 
-
 UPLOAD_DIR = "data/uploads"
-
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+def serialize_case(case):
+    return {
+        "id": case.id,
+        "case_id": case.case_id,
+        "filename": case.filename,
+        "file_type": case.file_type,
+        "file_path": case.file_path,
+        "risk_level": case.risk_level,
+        "risk_score": case.risk_score,
+        "findings": case.findings,
+        "analysis_details": (
+            json.loads(case.analysis_details)
+            if case.analysis_details
+            else None
+        ),
+        "created_at": (
+            case.created_at.isoformat()
+            if case.created_at
+            else None
+        ),
+    }
 
 
 @router.get("/status")
@@ -28,19 +50,19 @@ def system_status():
         "api": "ONLINE",
         "database": "ONLINE",
         "ai_engine": "STANDBY",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 
 @router.post("/api/v1/analyze")
 async def analyze_evidence(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     if not file.filename:
         raise HTTPException(
             status_code=400,
-            detail="No file provided."
+            detail="No file provided.",
         )
 
     allowed_extensions = {
@@ -48,7 +70,7 @@ async def analyze_evidence(
         ".jpeg",
         ".png",
         ".pdf",
-        ".webp"
+        ".webp",
     }
 
     extension = os.path.splitext(file.filename)[1].lower()
@@ -56,58 +78,58 @@ async def analyze_evidence(
     if extension not in allowed_extensions:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type: {extension}"
+            detail=f"Unsupported file type: {extension}",
         )
 
-    # Generate ONE Case ID for the complete verification case
-    case_id = f"SNT-{uuid.uuid4().hex[:8].upper()}"
-
-    # Prevent unsafe filenames and keep the Case ID attached to the file
     original_filename = os.path.basename(file.filename)
-
+    case_id = f"SNT-{uuid.uuid4().hex[:8].upper()}"
     safe_filename = f"{case_id}_{original_filename}"
+    file_path = os.path.join(UPLOAD_DIR, safe_filename)
 
-    file_path = os.path.join(
-        UPLOAD_DIR,
-        safe_filename
-    )
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-    # Save uploaded evidence
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        result = run_analysis(
+            file_path=file_path,
+            filename=original_filename,
+            case_id=case_id,
+        )
 
-    # Run the analysis using the SAME Case ID
-    result = run_analysis(
-        file_path=file_path,
-        filename=original_filename,
-        case_id=case_id
-    )
+        # Persist the complete analysis, including module details.
+        analysis_details = result.model_dump(mode="json")
 
-    # Save the verification case in SQLite
-    case = Case(
-        case_id=result.case_id,
-        filename=result.filename,
-        file_type=result.file_type,
-        file_path=file_path,
-        risk_level=result.overall_risk,
-        risk_score=result.risk_score,
-        findings="\n".join(result.findings),
-    )
+        case = Case(
+            case_id=result.case_id,
+            filename=result.filename,
+            file_type=result.file_type,
+            file_path=file_path,
+            risk_level=result.overall_risk,
+            risk_score=result.risk_score,
+            findings="\n".join(result.findings),
+            analysis_details=json.dumps(analysis_details),
+        )
 
-    db.add(case)
-    db.commit()
-    db.refresh(case)
+        db.add(case)
+        db.commit()
+        db.refresh(case)
 
-    return {
-        "message": "Evidence analyzed successfully.",
-        "case_id": result.case_id,
-        "filename": result.filename,
-        "file_type": result.file_type,
-        "risk_level": result.overall_risk,
-        "risk_score": result.risk_score,
-        "findings": result.findings,
-        "analyzed_at": result.analyzed_at,
-    }
+        return {
+            "message": "Evidence analyzed successfully.",
+            **serialize_case(case),
+            "analyzed_at": result.analyzed_at.isoformat(),
+        }
+
+    except Exception:
+        db.rollback()
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        raise
+
+    finally:
+        await file.close()
 
 
 @router.get("/api/v1/cases")
@@ -121,27 +143,16 @@ def get_cases(db: Session = Depends(get_db)):
     return {
         "count": len(cases),
         "cases": [
-            {
-                "id": case.id,
-                "case_id": case.case_id,
-                "filename": case.filename,
-                "file_type": case.file_type,
-                "risk_level": case.risk_level,
-                "risk_score": case.risk_score,
-                "findings": case.findings,
-                "created_at": case.created_at.isoformat()
-                if case.created_at
-                else None
-            }
+            serialize_case(case)
             for case in cases
-        ]
+        ],
     }
 
 
 @router.get("/api/v1/cases/{case_id}")
 def get_case(
     case_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     case = (
         db.query(Case)
@@ -152,19 +163,7 @@ def get_case(
     if not case:
         raise HTTPException(
             status_code=404,
-            detail="Case not found"
+            detail="Case not found",
         )
 
-    return {
-        "id": case.id,
-        "case_id": case.case_id,
-        "filename": case.filename,
-        "file_type": case.file_type,
-        "file_path": case.file_path,
-        "risk_level": case.risk_level,
-        "risk_score": case.risk_score,
-        "findings": case.findings,
-        "created_at": case.created_at.isoformat()
-        if case.created_at
-        else None
-    }
+    return serialize_case(case)

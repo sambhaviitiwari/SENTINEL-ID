@@ -66,6 +66,11 @@ class Case(Base):
         nullable=True
     )
 
+    analysis_details = Column(
+        Text,
+        nullable=True
+    )
+
     created_at = Column(
         DateTime,
         default=datetime.utcnow

@@ -1,22 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.db.database import Base, engine
+from backend.db.database import (
+    Base,
+    engine,
+    migrate_case_analysis_details,
+)
 from backend.db import models
 from backend.api.routes import router
 
 
 Base.metadata.create_all(bind=engine)
+migrate_case_analysis_details()
 
 
 app = FastAPI(
     title="SENTINEL-ID",
     description="AI-Powered Multimodal Digital Identity & Synthetic Media Security System",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 
-# Allow React/Vite frontend to communicate with FastAPI backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -37,7 +41,7 @@ def root():
     return {
         "system": "SENTINEL-ID",
         "status": "online",
-        "version": "0.1.0"
+        "version": "0.1.0",
     }
 
 
