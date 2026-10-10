@@ -10,7 +10,7 @@ const systems = [
   {
     name: "API CORE",
     value: "ONLINE",
-    detail: "127.0.0.1:8000",
+    detail: "127.0.0.1:8001",
     icon: Server,
   },
   {

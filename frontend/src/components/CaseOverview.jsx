@@ -1,17 +1,23 @@
 import {
-  ArrowUpRight,
+  Download,
   Clock3,
   FileImage,
   Fingerprint,
   ScanSearch,
   ShieldAlert,
   Sparkles,
-  FileSearch,
   Hash,
   AlertTriangle,
+  LoaderCircle,
 } from "lucide-react";
+import { useState } from "react";
+
+const API_BASE = "http://127.0.0.1:8001";
 
 function CaseOverview({ caseData }) {
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+
   const currentCase = caseData || {
     case_id: "NO CASE SELECTED",
     filename: "No evidence selected",
@@ -37,7 +43,7 @@ function CaseOverview({ caseData }) {
 
   const hasCurrentAssessment =
     findings.includes("overall risk classification is inconclusive") ||
-    Boolean(analysis.overall_risk === "INCONCLUSIVE");
+    analysis.overall_risk === "INCONCLUSIVE";
 
   const riskLevel = hasCurrentAssessment
     ? "INCONCLUSIVE"
@@ -56,7 +62,8 @@ function CaseOverview({ caseData }) {
     ? parsedDocumentScore.toFixed(2)
     : "N/A";
 
-  const hash = documentDetails.sha256 ||
+  const hash =
+    documentDetails.sha256 ||
     identityAnalysis.details?.sha256 ||
     "";
 
@@ -65,8 +72,8 @@ function CaseOverview({ caseData }) {
   const dimensions = documentDetails.image_dimensions;
   const imageDimensions =
     dimensions?.width && dimensions?.height
-      ? `${dimensions.width} × ${dimensions.height}`
-      : "N/A";
+      ? String(dimensions.width) + ' x ' + String(dimensions.height)
+      : 'N/A';
 
   const fileSize = Number(documentDetails.size_bytes);
   const fileSizeDisplay =
@@ -108,6 +115,65 @@ function CaseOverview({ caseData }) {
       ? "AVAILABLE"
       : "UNAVAILABLE";
 
+  async function downloadReport() {
+    if (!caseData?.case_id || downloading) {
+      return;
+    }
+
+    setDownloading(true);
+    setDownloadError("");
+
+    let objectUrl;
+
+    try {
+      const response = await fetch(
+        API_BASE + '/api/v1/cases/' + encodeURIComponent(
+          currentCase.case_id
+        ) + '/report'
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          'Report download failed with HTTP ' + response.status
+        );
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+
+      if (
+        !contentType.includes("application/pdf")
+      ) {
+        throw new Error("The server did not return a PDF file.");
+      }
+
+      const blob = await response.blob();
+      objectUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = currentCase.case_id + '-investigation-report.pdf';
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Investigation report download failed:", error);
+
+      setDownloadError(
+        error.message ||
+          "Unable to download the investigation report. Check the backend connection."
+      );
+    } finally {
+      if (objectUrl) {
+        window.setTimeout(() => {
+          window.URL.revokeObjectURL(objectUrl);
+        }, 1000);
+      }
+
+      setDownloading(false);
+    }
+  }
+
   return (
     <section className="case-overview">
       <div className="case-heading">
@@ -134,11 +200,35 @@ function CaseOverview({ caseData }) {
           </div>
         </div>
 
-        <button className="case-action" type="button">
-          OPEN CASE
-          <ArrowUpRight size={15} />
+        <button
+          className="case-action"
+          type="button"
+          onClick={downloadReport}
+          disabled={!caseData?.case_id || downloading}
+          title="Download the investigation report for this case"
+        >
+          {downloading ? (
+            <>
+              GENERATING REPORT
+              <LoaderCircle className="download-spinner" size={15} />
+            </>
+          ) : (
+            <>
+              DOWNLOAD REPORT
+              <Download size={15} />
+            </>
+          )}
         </button>
       </div>
+
+      {downloadError && (
+        <div className="document-disclaimer" role="alert">
+          <AlertTriangle size={17} />
+          <p>
+            <strong>REPORT DOWNLOAD FAILED:</strong> {downloadError}
+          </p>
+        </div>
+      )}
 
       <div className="case-grid">
         <div className="evidence-panel">
@@ -195,7 +285,7 @@ function CaseOverview({ caseData }) {
           <div className="risk-display">
             <div className="risk-number">{riskLevel}</div>
 
-            <div className={`risk-level ${riskLevel.toLowerCase()}`}>
+            <div className={'risk-level ' + riskLevel.toLowerCase()}>
               <span />
               {riskLevel}
             </div>
@@ -339,7 +429,9 @@ function CaseOverview({ caseData }) {
             </div>
 
             <span
-              className={`fingerprint-badge ${hashCalculated ? "available" : ""}`}
+              className={`fingerprint-badge ${
+                hashCalculated ? "available" : ""
+              }`}
             >
               {hashCalculated ? "CALCULATED" : "UNAVAILABLE"}
             </span>
