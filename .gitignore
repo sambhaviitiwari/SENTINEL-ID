@@ -38,3 +38,31 @@ build/
 
 # Uploaded evidence
 data/uploads/
+
+# Local evidence and investigation data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated investigation reports
+investigation-report.pdf
+investigation-report-*.pdf
+
+# Local backups
+*.bak
+README-backup.md
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Python virtual environments
+venv/
+.venv/
+
+# Frontend dependencies and build output
+node_modules/
+dist/
+build/

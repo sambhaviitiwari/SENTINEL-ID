@@ -2,241 +2,98 @@
 
 ### AI-Powered Multimodal Digital Identity & Synthetic Media Security System
 
-SENTINEL-ID is an AI-driven security platform designed to analyze digital identity evidence across multiple modalities and identify potential identity fraud, document manipulation, facial inconsistencies, and synthetic media.
+SENTINEL-ID is a security-focused web application for inspecting digital evidence and organizing investigations. It combines a React command-center interface with a FastAPI backend and a SQLite development database.
 
-The system is being developed as a modular security platform combining **document intelligence, biometric verification, synthetic-media analysis, and explainable risk assessment**.
+**Project status:** Active prototype and portfolio capstone.
 
----
-
-## 🚧 Project Status
-
-**Version:** 0.1.0  
-**Status:** Foundation & Backend Development
-
-### Current Progress
-
-- [x] Project architecture initialized
-- [x] Python virtual environment configured
-- [x] FastAPI backend initialized
-- [x] API health monitoring endpoint
-- [x] SQLAlchemy database integration
-- [x] SQLite development database
-- [x] Initial User database model
-- [ ] Verification Case system
-- [ ] Identity document analysis
-- [ ] OCR pipeline
-- [ ] Document tampering detection
-- [ ] Face verification
-- [ ] Synthetic media detection
-- [ ] Multimodal risk engine
-- [ ] Explainable AI layer
-- [ ] React security dashboard
-- [ ] Authentication & authorization
-- [ ] Production deployment
+The current application includes a security dashboard, evidence-analysis workflow, case registry, document metadata inspection, and structured investigation records. Advanced biometric verification and synthetic-media detection require further implementation and validation before they can be considered production-ready.
 
 ---
 
-## 🎯 Core Objectives
+## Project Overview
 
-SENTINEL-ID aims to provide a unified system for:
+SENTINEL-ID aims to provide a unified workspace for examining digital evidence, recording investigation results, and organizing potential identity-security concerns.
 
-- Multimodal identity verification
-- Digital identity document analysis
-- OCR and document structure analysis
-- Document authenticity and tampering detection
-- Face-to-ID verification
-- Synthetic media and deepfake detection
-- Metadata consistency analysis
-- Multimodal risk scoring
-- Explainable AI-based verification
-- Secure identity evidence processing
+### Current Features
 
----
+- Dark, cyber-inspired command-center dashboard
+- Evidence upload and analysis workflow
+- Investigation case registry and case-detail views
+- Document Intelligence metadata panel
+- SHA-256 file fingerprinting when available
+- File format and structural metadata inspection
+- Backend API and database status monitoring
+- Structured findings and risk assessment output
+- PDF investigation report generation
+- Interactive API documentation through FastAPI
 
-## 🏗️ Planned Technology Stack
+## Technology Stack
 
-### Frontend
+| Layer | Technologies |
+|---|---|
+| Frontend | React, Vite, JavaScript |
+| UI | CSS, Lucide React |
+| Backend | Python, FastAPI |
+| Data validation | Pydantic |
+| Database | SQLAlchemy, SQLite |
+| Document inspection | Python imaging and document-processing libraries |
+| Reporting | ReportLab |
 
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
+## Application Architecture
 
-### Backend
+```text
+                  USER
+                   |
+                   v
+          React + Vite Frontend
+                   |
+             HTTP / JSON
+                   |
+                   v
+             FastAPI Backend
+                   |
+          Evidence Analysis Pipeline
+                   |
+          +--------+---------+
+          |                  |
+          v                  v
+    Analysis Modules    Case Management
+          |                  |
+          +--------+---------+
+                   |
+                   v
+           SQLAlchemy + SQLite
+                   |
+                   v
+          Investigation Records
+```
 
-- Python
-- FastAPI
-- Pydantic
-- SQLAlchemy
-
-### AI / Machine Learning
-
-- Python
-- OpenCV
-- scikit-learn
-- PyTorch
-- Transformers
-
-### Database
-
-- SQLite for development
-- PostgreSQL for production
-
-### Security
-
-- JWT authentication
-- Password hashing
-- Environment-based secrets
-- Secure file validation
-- Input validation
-- Protected API endpoints
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```text
 SENTINEL-ID/
-│
-├── ai/
-│
 ├── backend/
+│   ├── api/
+│   ├── core/
 │   ├── db/
-│   │   ├── __init__.py
-│   │   ├── database.py
-│   │   └── models.py
-│   │
-│   └── main.py
-│
-├── data/
-├── docs/
+│   └── modules/
 ├── frontend/
-├── models/
-├── scripts/
-├── tests/
-│
-├── .gitignore
-├── README.md
+│   ├── src/
+│   │   └── components/
+│   ├── package.json
+│   └── vite.config.js
 ├── requirements.txt
-└── sentinel.db
+├── .gitignore
+└── README.md
 ```
 
-> `sentinel.db` is a local development database and is excluded from version control.
+## Run the Project Locally
 
----
+### Prerequisites
 
-## 🔌 Current API
-
-The backend currently exposes the following endpoints:
-
-### Root Endpoint
-
-```http
-GET /
-```
-
-Returns the current system status and version.
-
-### Health Check
-
-```http
-GET /health
-```
-
-Used to verify that the SENTINEL-ID backend is operational.
-
-### API Documentation
-
-FastAPI automatically provides interactive API documentation through:
-
-```text
-/docs
-```
-
----
-
-## 🗄️ Current Database Architecture
-
-The development database uses **SQLite** with **SQLAlchemy** as the ORM.
-
-The first implemented model is:
-
-### User
-
-```text
-User
-├── id
-├── name
-├── email
-└── created_at
-```
-
-The database architecture will be expanded around a central **Verification Case** model.
-
-The planned relationship is:
-
-```text
-Verification Case
-│
-├── Identity Document
-│   ├── OCR Results
-│   ├── Document Structure
-│   └── Tampering Indicators
-│
-├── Face Verification
-│   ├── ID Face
-│   ├── Selfie Face
-│   └── Match Score
-│
-├── Synthetic Media Analysis
-│   ├── Manipulation Indicators
-│   └── Detection Score
-│
-├── Metadata Analysis
-│   └── Consistency Indicators
-│
-└── Risk Assessment
-    ├── Risk Score
-    ├── Risk Level
-    └── Explainability Report
-```
-
----
-
-## 🧠 Planned Verification Pipeline
-
-A verification request will eventually pass through the following pipeline:
-
-```text
-User
-  │
-  ▼
-Evidence Upload
-  │
-  ├───────────────┐
-  ▼               ▼
-ID Document      Selfie / Media
-  │               │
-  ▼               ▼
-OCR + Document   Face / Media
-Analysis         Analysis
-  │               │
-  └───────┬───────┘
-          ▼
-   Multimodal Analysis
-          │
-          ▼
-     Risk Engine
-          │
-          ▼
-  Explainable Result
-```
-
-The objective is not to rely on a single AI model. SENTINEL-ID is designed to combine multiple evidence sources before producing a final risk assessment.
-
----
-
-## 🚀 Local Development
+- Python 3.11 or a compatible version
+- Node.js and npm
+- Git
 
 ### 1. Clone the repository
 
@@ -245,139 +102,121 @@ git clone https://github.com/sambhaviitiwari/SENTINEL-ID.git
 cd SENTINEL-ID
 ```
 
-### 2. Create a virtual environment
+### 2. Start the backend
 
-```bash
+From the repository root, create and activate a virtual environment:
+
+**Windows CMD**
+
+```cmd
 python -m venv venv
-```
-
-### 3. Activate the virtual environment
-
-Windows CMD:
-
-```cmd
 venv\Scripts\activate
-```
-
-### 4. Install dependencies
-
-```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8001
 ```
 
-### 5. Start the backend
+The backend should be available at:
 
-```bash
-uvicorn backend.main:app --reload
-```
+- API root: `http://127.0.0.1:8001/`
+- System status: `http://127.0.0.1:8001/status`
+- Interactive API documentation: `http://127.0.0.1:8001/docs`
 
-The API will be available at:
+Keep this terminal running.
 
-```text
-http://127.0.0.1:8000
-```
+### 3. Start the frontend
 
-Interactive API documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
----
-
-## 🔐 Security Notice
-
-SENTINEL-ID is designed to process potentially sensitive identity evidence.
-
-The project therefore follows security-first development principles, including:
-
-- Never committing passwords or API keys
-- Environment-based configuration
-- Secure file validation
-- Input validation
-- Controlled database access
-- Excluding local databases from Git
-- Excluding trained model weights from Git
-- Authentication and authorization for protected resources
-
-Sensitive credentials and private identity data must never be committed to the repository.
-
----
-
-## 🛣️ Development Roadmap
-
-### Phase 1 — Foundation
-- Project architecture
-- FastAPI backend
-- Database layer
-- Core data models
-
-### Phase 2 — Identity Document Intelligence
-- Secure document upload
-- OCR
-- Document classification
-- Structural analysis
-- Tampering indicators
-
-### Phase 3 — Biometric Verification
-- Face detection
-- Face embedding
-- ID-to-selfie comparison
-- Verification confidence score
-
-### Phase 4 — Synthetic Media Detection
-- Image analysis
-- Manipulation detection
-- Deepfake indicators
-- Media authenticity scoring
-
-### Phase 5 — Multimodal Risk Engine
-- Evidence aggregation
-- Risk scoring
-- Risk classification
-- Explainable decision factors
-
-### Phase 6 — Security Dashboard
-- React frontend
-- Verification workflow
-- Case management
-- Evidence visualization
-- Risk reports
-
-### Phase 7 — Production Readiness
-- Authentication
-- PostgreSQL
-- API security
-- Testing
-- Deployment
-- Documentation
-
----
-
-## ⚠️ Disclaimer
-
-SENTINEL-ID is a research and educational project intended for demonstrating concepts in artificial intelligence, cybersecurity, digital identity verification, and synthetic media analysis.
-
-It is not intended to replace legally authorized identity verification systems, government identity infrastructure, or professional forensic investigation.
-```
-
-**Now save the file.** Then, because Git is currently in the middle of the merge, run these commands in CMD:
+Open a second CMD window:
 
 ```cmd
-git add README.md
-git status
+cd /d "C:\Users\sambh\OneDrive\Desktop\SENTINEL-ID\frontend"
+npm install
+npm run dev
 ```
 
-If `git status` says **“All conflicts fixed but you are still merging”**, run:
+Open the local address printed by Vite, normally:
+
+`http://localhost:5173`
+
+### 4. Build the frontend
+
+From the `frontend` directory:
 
 ```cmd
-git commit -m "merge: integrate GitHub repository history"
+npm run build
 ```
 
-Then:
+Vite writes the production build to `frontend/dist/`.
 
-```cmd
-git push -u origin main
-```
+## API Overview
 
-That will give us the clean GitHub checkpoint we want before we start building the **Verification Case architecture**.
+The backend currently exposes endpoints for system status, evidence analysis, and case management.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/status` | System and service status |
+| POST | `/api/v1/analyze` | Submit evidence for analysis |
+| GET | `/api/v1/cases` | List registered cases |
+| GET | `/api/v1/cases/{case_id}` | Retrieve a case |
+
+Visit `/docs` on the running backend to inspect the available request schemas and responses.
+
+## Development Status
+
+### Implemented or checked locally
+
+- [x] React dashboard and navigation
+- [x] FastAPI backend foundation
+- [x] Database integration
+- [x] Case registry and case-detail workflow
+- [x] Document metadata interface
+- [x] Evidence-analysis pipeline foundation
+- [x] Frontend production build
+- [x] Local API status check
+
+### Remaining work
+
+- [ ] Automated end-to-end and regression tests
+- [ ] Comprehensive upload and report-generation validation
+- [ ] Evaluation of biometric and synthetic-media analysis models
+- [ ] Authentication and authorization
+- [ ] Secure evidence storage and retention controls
+- [ ] Production deployment
+- [ ] Public demo and application screenshots
+- [ ] Deployment and security documentation
+
+This checklist reflects development progress, not independent certification or production readiness.
+
+## Security and Limitations
+
+SENTINEL-ID is an experimental prototype, not a certified forensic or identity-verification service.
+
+- A SHA-256 hash identifies file contents; it does not establish that a document is authentic.
+- Metadata and structural checks can provide useful signals but cannot independently prove fraud.
+- Risk classifications should be interpreted alongside the findings and limitations of the analysis.
+- Biometric and synthetic-media detection capabilities must be evaluated before being relied on for real decisions.
+- Use synthetic or non-sensitive sample evidence for demonstrations.
+- Do not upload real identity documents or confidential investigation data to a public demo.
+
+Before production deployment, the application requires appropriate access controls, upload validation and size limits, safe file storage, rate limiting, restricted CORS origins, and a defined data-retention policy.
+
+## Roadmap
+
+- [x] Establish the full-stack application foundation
+- [x] Build the command-center interface
+- [x] Integrate case management and document inspection
+- [ ] Strengthen automated testing and error handling
+- [ ] Validate individual analysis modules
+- [ ] Complete the public deployment
+- [ ] Publish genuine application screenshots
+- [ ] Document the live demo and deployment architecture
+
+## Author
+
+Developed as a software engineering and digital-security portfolio project.
+
+**Repository:** [SENTINEL-ID](https://github.com/sambhaviitiwari/SENTINEL-ID)
+
+## License
+
+No license has been selected yet. Until a license is added, others should not assume they have permission to reuse, modify, or redistribute this code.
